@@ -15,6 +15,7 @@ import (
 var _ = Describe("Transport Parameters", func() {
 	It("has a string representation", func() {
 		p := &TransportParameters{
+			PreferredAddress:               0x5678,
 			InitialMaxStreamDataBidiLocal:  0x1234,
 			InitialMaxStreamDataBidiRemote: 0x2345,
 			InitialMaxStreamDataUni:        0x3456,
@@ -29,6 +30,22 @@ var _ = Describe("Transport Parameters", func() {
 		Expect(p.String()).To(Equal("&handshake.TransportParameters{OriginalConnectionID: 0xdeadbeef, InitialMaxStreamDataBidiLocal: 0x1234, InitialMaxStreamDataBidiRemote: 0x2345, InitialMaxStreamDataUni: 0x3456, InitialMaxData: 0x4567, MaxBidiStreams: 1337, MaxUniStreams: 7331, IdleTimeout: 42s, AckDelayExponent: 14, StatelessResetToken: 0x112233445566778899aabbccddeeff00}"))
 	})
 
+	It("has a string representation, if there's no stateless reset token", func() {
+		p := &TransportParameters{
+			PreferredAddress:               0x5678,
+			InitialMaxStreamDataBidiLocal:  0x1234,
+			InitialMaxStreamDataBidiRemote: 0x2345,
+			InitialMaxStreamDataUni:        0x3456,
+			InitialMaxData:                 0x4567,
+			MaxBidiStreams:                 1337,
+			MaxUniStreams:                  7331,
+			IdleTimeout:                    42 * time.Second,
+			OriginalConnectionID:           protocol.ConnectionID{0xde, 0xad, 0xbe, 0xef},
+			AckDelayExponent:               14,
+		}
+		Expect(p.String()).To(Equal("&handshake.TransportParameters{OriginalConnectionID: 0xdeadbeef, InitialMaxStreamDataBidiLocal: 0x1234, InitialMaxStreamDataBidiRemote: 0x2345, InitialMaxStreamDataUni: 0x3456, InitialMaxData: 0x4567, MaxBidiStreams: 1337, MaxUniStreams: 7331, IdleTimeout: 42s, AckDelayExponent: 14}"))
+	})
+
 	getRandomValue := func() uint64 {
 		maxVals := []int64{math.MaxUint8 / 4, math.MaxUint16 / 4, math.MaxUint32 / 4, math.MaxUint64 / 4}
 		rand.Seed(GinkgoRandomSeed())
@@ -39,6 +56,7 @@ var _ = Describe("Transport Parameters", func() {
 		var token [16]byte
 		rand.Read(token[:])
 		params := &TransportParameters{
+			PreferredAddress:               0x5678,
 			InitialMaxStreamDataBidiLocal:  protocol.ByteCount(getRandomValue()),
 			InitialMaxStreamDataBidiRemote: protocol.ByteCount(getRandomValue()),
 			InitialMaxStreamDataUni:        protocol.ByteCount(getRandomValue()),
@@ -46,7 +64,7 @@ var _ = Describe("Transport Parameters", func() {
 			IdleTimeout:                    0xcafe * time.Second,
 			MaxBidiStreams:                 getRandomValue(),
 			MaxUniStreams:                  getRandomValue(),
-			DisableMigration:               true,
+			DisableMigration:               false,
 			StatelessResetToken:            &token,
 			OriginalConnectionID:           protocol.ConnectionID{0xde, 0xad, 0xbe, 0xef},
 			AckDelayExponent:               13,
@@ -55,6 +73,7 @@ var _ = Describe("Transport Parameters", func() {
 		params.marshal(b)
 
 		p := &TransportParameters{}
+		Expect(p.PreferredAddress).To(Equal(uint64(params.PreferredAddress)))
 		Expect(p.unmarshal(b.Bytes(), protocol.PerspectiveServer)).To(Succeed())
 		Expect(p.InitialMaxStreamDataBidiLocal).To(Equal(params.InitialMaxStreamDataBidiLocal))
 		Expect(p.InitialMaxStreamDataBidiRemote).To(Equal(params.InitialMaxStreamDataBidiRemote))

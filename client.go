@@ -353,7 +353,7 @@ func (c *client) createNewTLSSession(version protocol.VersionNumber) error {
 		MaxBidiStreams:                 uint64(c.config.MaxIncomingStreams),
 		MaxUniStreams:                  uint64(c.config.MaxIncomingUniStreams),
 		AckDelayExponent:               protocol.AckDelayExponent,
-		DisableMigration:               true,
+		DisableMigration:               false,
 	}
 
 	c.mutex.Lock()

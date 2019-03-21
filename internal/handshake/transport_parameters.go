@@ -27,10 +27,12 @@ const (
 	initialMaxStreamsUniParameterID           transportParameterID = 0x9
 	ackDelayExponentParameterID               transportParameterID = 0xa
 	disableMigrationParameterID               transportParameterID = 0xc
+	preferredAddressID                        transportParameterID = 0xd
 )
 
 // TransportParameters are parameters sent to the peer during the handshake
 type TransportParameters struct {
+	PreferredAddress               uint64
 	InitialMaxStreamDataBidiLocal  protocol.ByteCount
 	InitialMaxStreamDataBidiRemote protocol.ByteCount
 	InitialMaxStreamDataUni        protocol.ByteCount
@@ -63,6 +65,12 @@ func (p *TransportParameters) unmarshal(data []byte, sentBy protocol.Perspective
 		paramLen, _ := utils.BigEndian.ReadUint16(r)
 		parameterIDs = append(parameterIDs, paramID)
 		switch paramID {
+		case preferredAddressID:
+			fmt.Errorf("SimonGu: received preferredAddressID")
+			if err := p.readNumericTransportParameter(r, paramID, int(paramLen)); err != nil {
+				fmt.Errorf("SimonGu: received preferredAddressID, 0x%x", err)
+				return err
+			}
 		case ackDelayExponentParameterID:
 			readAckDelayExponent = true
 			fallthrough
@@ -140,6 +148,8 @@ func (p *TransportParameters) readNumericTransportParameter(
 		return fmt.Errorf("inconsistent transport parameter length for %d", paramID)
 	}
 	switch paramID {
+	case preferredAddressID:
+		p.PreferredAddress = val
 	case initialMaxStreamDataBidiLocalParameterID:
 		p.InitialMaxStreamDataBidiLocal = protocol.ByteCount(val)
 	case initialMaxStreamDataBidiRemoteParameterID:
@@ -171,6 +181,10 @@ func (p *TransportParameters) readNumericTransportParameter(
 }
 
 func (p *TransportParameters) marshal(b *bytes.Buffer) {
+	//initial preferredAddress
+	utils.BigEndian.WriteUint16(b, uint16(preferredAddressID))
+	utils.BigEndian.WriteUint16(b, uint16(utils.VarIntLen(uint64(p.PreferredAddress))))
+	utils.WriteVarInt(b, uint64(p.PreferredAddress))
 	// initial_max_stream_data_bidi_local
 	utils.BigEndian.WriteUint16(b, uint16(initialMaxStreamDataBidiLocalParameterID))
 	utils.BigEndian.WriteUint16(b, uint16(utils.VarIntLen(uint64(p.InitialMaxStreamDataBidiLocal))))
@@ -232,9 +246,11 @@ func (p *TransportParameters) marshal(b *bytes.Buffer) {
 // String returns a string representation, intended for logging.
 func (p *TransportParameters) String() string {
 	logString := "&handshake.TransportParameters{OriginalConnectionID: %s, InitialMaxStreamDataBidiLocal: %#x, InitialMaxStreamDataBidiRemote: %#x, InitialMaxStreamDataUni: %#x, InitialMaxData: %#x, MaxBidiStreams: %d, MaxUniStreams: %d, IdleTimeout: %s, AckDelayExponent: %d"
+	logParams := []interface{}{p.OriginalConnectionID, p.InitialMaxStreamDataBidiLocal, p.InitialMaxStreamDataBidiRemote, p.InitialMaxStreamDataUni, p.InitialMaxData, p.MaxBidiStreams, p.MaxUniStreams, p.IdleTimeout, p.AckDelayExponent}
 	if p.StatelessResetToken != nil { // the client never sends a stateless reset token
 		logString += ", StatelessResetToken: %#x"
+		logParams = append(logParams, *p.StatelessResetToken)
 	}
 	logString += "}"
-	return fmt.Sprintf(logString, p.OriginalConnectionID, p.InitialMaxStreamDataBidiLocal, p.InitialMaxStreamDataBidiRemote, p.InitialMaxStreamDataUni, p.InitialMaxData, p.MaxBidiStreams, p.MaxUniStreams, p.IdleTimeout, p.AckDelayExponent, *p.StatelessResetToken)
+	return fmt.Sprintf(logString, logParams...)
 }

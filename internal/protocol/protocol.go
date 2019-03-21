@@ -69,3 +69,7 @@ const DefaultAckDelayExponent = 3
 
 // MaxAckDelayExponent is the maximum ack delay exponent
 const MaxAckDelayExponent = 20
+
+
+//define default preferedAddress for server
+const PreferredAddress = 0x5678

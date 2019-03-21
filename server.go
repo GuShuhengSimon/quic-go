@@ -438,6 +438,7 @@ func (s *server) createNewSession(
 ) (quicSession, error) {
 	token := s.sessionHandler.GetStatelessResetToken(srcConnID)
 	params := &handshake.TransportParameters{
+		PreferredAddress:               protocol.PreferredAddress,
 		InitialMaxStreamDataBidiLocal:  protocol.InitialMaxStreamData,
 		InitialMaxStreamDataBidiRemote: protocol.InitialMaxStreamData,
 		InitialMaxStreamDataUni:        protocol.InitialMaxStreamData,
@@ -446,7 +447,7 @@ func (s *server) createNewSession(
 		MaxBidiStreams:                 uint64(s.config.MaxIncomingStreams),
 		MaxUniStreams:                  uint64(s.config.MaxIncomingUniStreams),
 		AckDelayExponent:               protocol.AckDelayExponent,
-		DisableMigration:               true,
+		DisableMigration:               false,
 		StatelessResetToken:            &token,
 		OriginalConnectionID:           origDestConnID,
 	}
