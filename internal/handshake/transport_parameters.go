@@ -7,6 +7,7 @@ import (
 	"io"
 	"sort"
 	"time"
+        "log"
 
 	"github.com/lucas-clemente/quic-go/internal/protocol"
 	"github.com/lucas-clemente/quic-go/internal/utils"
@@ -58,6 +59,7 @@ func (p *TransportParameters) unmarshal(data []byte, sentBy protocol.Perspective
 
 	var readAckDelayExponent bool
 
+	log.Println("unmarshal called")
 	r := bytes.NewReader(data)
 	for r.Len() >= 4 {
 		paramIDInt, _ := utils.BigEndian.ReadUint16(r)
@@ -66,9 +68,8 @@ func (p *TransportParameters) unmarshal(data []byte, sentBy protocol.Perspective
 		parameterIDs = append(parameterIDs, paramID)
 		switch paramID {
 		case preferredAddressID:
-			fmt.Errorf("SimonGu: received preferredAddressID")
-			if err := p.readNumericTransportParameter(r, paramID, int(paramLen)); err != nil {
-				fmt.Errorf("SimonGu: received preferredAddressID, 0x%x", err)
+			log.Println("SimonGu: received preferredAddressID")
+			if err := p.readNumericTransportParameter(r, paramID, int(paramLen)); err != nil {				
 				return err
 			}
 		case ackDelayExponentParameterID:
@@ -150,6 +151,7 @@ func (p *TransportParameters) readNumericTransportParameter(
 	switch paramID {
 	case preferredAddressID:
 		p.PreferredAddress = val
+		log.Println("SimonGu: received preferredAddressID: ", p.PreferredAddress)
 	case initialMaxStreamDataBidiLocalParameterID:
 		p.InitialMaxStreamDataBidiLocal = protocol.ByteCount(val)
 	case initialMaxStreamDataBidiRemoteParameterID:
@@ -182,6 +184,7 @@ func (p *TransportParameters) readNumericTransportParameter(
 
 func (p *TransportParameters) marshal(b *bytes.Buffer) {
 	//initial preferredAddress
+        log.Println("SimonGu: encoding preferredAddressID", p.PreferredAddress)
 	utils.BigEndian.WriteUint16(b, uint16(preferredAddressID))
 	utils.BigEndian.WriteUint16(b, uint16(utils.VarIntLen(uint64(p.PreferredAddress))))
 	utils.WriteVarInt(b, uint64(p.PreferredAddress))
